@@ -12,14 +12,16 @@ const emailProvider = require('../services/emails/emailProvider');
  * Returns a formated object with tokens
  * @private
  */
-function generateTokenResponse(user, accessToken) {
+async function generateTokenResponse(user, accessToken) {
   const tokenType = 'Bearer';
-  const refreshToken = RefreshToken.generate(user).token;
+  const refreshToken = await RefreshToken.generate(user);
+  const passwordResetToken = await PasswordResetToken.generate(user);
   const expiresIn = moment().add(jwtExpirationInterval, 'minutes');
   return {
     tokenType,
     accessToken,
-    refreshToken,
+    refreshToken: refreshToken.token,
+    passwordResetToken: passwordResetToken.resetToken,
     expiresIn,
   };
 }
@@ -48,7 +50,7 @@ exports.register = async (req, res, next) => {
 exports.login = async (req, res, next) => {
   try {
     const { user, accessToken } = await User.findAndGenerateToken(req.body);
-    const token = generateTokenResponse(user, accessToken);
+    const token = await generateTokenResponse(user, accessToken);
     const userTransformed = user.transform();
     return res.json({ token, user: userTransformed });
   } catch (error) {
@@ -80,12 +82,21 @@ exports.oAuth = async (req, res, next) => {
 exports.refresh = async (req, res, next) => {
   try {
     const { email, refreshToken } = req.body;
-    const refreshObject = await RefreshToken.findOneAndRemove({
-      userEmail: email,
-      token: refreshToken,
+    const refreshObject = await RefreshToken.findOne({
+      where: {
+        email,
+        token: refreshToken,
+      },
     });
-    const { user, accessToken } = await User.findAndGenerateToken({ email, refreshObject });
-    const response = generateTokenResponse(user, accessToken);
+    if (!refreshObject) {
+      throw new APIError({
+        message: 'Invalid refresh token',
+        status: httpStatus.UNAUTHORIZED,
+      });
+    }
+    const user = await User.findOne({ where: { email } });
+    const accessToken = user.token();
+    const response = await generateTokenResponse(user, accessToken);
     return res.json(response);
   } catch (error) {
     return next(error);
@@ -115,9 +126,11 @@ exports.sendPasswordReset = async (req, res, next) => {
 exports.resetPassword = async (req, res, next) => {
   try {
     const { email, password, resetToken } = req.body;
-    const resetTokenObject = await PasswordResetToken.findOneAndRemove({
-      userEmail: email,
-      resetToken,
+    const resetTokenObject = await PasswordResetToken.findOne({
+      where: {
+        email,
+        resetToken,
+      },
     });
 
     const err = {
@@ -133,10 +146,10 @@ exports.resetPassword = async (req, res, next) => {
       throw new APIError(err);
     }
 
-    const user = await User.findOne({ email: resetTokenObject.userEmail }).exec();
+    const user = await User.findOne({ where: { email: resetTokenObject.email } });
     user.password = password;
     await user.save();
-    emailProvider.sendPasswordChangeEmail(user);
+    // emailProvider.sendPasswordChangeEmail(user);
 
     res.status(httpStatus.OK);
     return res.json('Password Updated');

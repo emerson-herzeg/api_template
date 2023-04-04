@@ -1,4 +1,4 @@
-const {DataTypes} = require('sequelize');
+const { DataTypes } = require('sequelize');
 const crypto = require('crypto');
 const moment = require('moment-timezone');
 const sequelize = require('../../config/sequelize');
@@ -50,7 +50,6 @@ RefreshToken.generate = async function (user) {
       expires,
     });
   } catch (error) {
-    console.log(error);
     return error;
   }
 };

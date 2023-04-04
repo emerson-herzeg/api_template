@@ -1,57 +1,51 @@
-const mongoose = require('mongoose');
+const Sequelize = require('sequelize');
 const crypto = require('crypto');
 const moment = require('moment-timezone');
+const sequelize = require('../../config/sequelize');
 
-/**
- * Refresh Token Schema
- * @private
- */
-const passwordResetTokenSchema = new mongoose.Schema({
+const PasswordResetToken = sequelize.define('password_reset_token', {
   resetToken: {
-    type: String,
-    required: true,
-    index: true,
+    type: Sequelize.STRING,
+    allowNull: false,
+    unique: true,
+    primaryKey: true,
   },
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
+  id_user: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id_user',
+    },
   },
-  userEmail: {
-    type: 'String',
-    ref: 'User',
-    required: true,
+  email: {
+    type: Sequelize.CHAR(100),
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'email',
+    },
   },
-  expires: { type: Date },
-});
+  expires: {
+    type: Sequelize.DATE,
+    allowNull: false,
+  },
+}, { freezeTableName: true, autoIncrement: false, id: false });
 
-passwordResetTokenSchema.statics = {
-  /**
-   * Generate a reset token object and saves it into the database
-   *
-   * @param {User} user
-   * @returns {ResetToken}
-   */
-  async generate(user) {
-    const userId = user._id;
-    const userEmail = user.email;
-    const resetToken = `${userId}.${crypto.randomBytes(40).toString('hex')}`;
-    const expires = moment()
-      .add(2, 'hours')
-      .toDate();
-    const ResetTokenObject = new PasswordResetToken({
-      resetToken,
-      userId,
-      userEmail,
-      expires,
-    });
-    await ResetTokenObject.save();
-    return ResetTokenObject;
-  },
+// eslint-disable-next-line func-names
+PasswordResetToken.generate = async function (user) {
+  // eslint-disable-next-line camelcase
+  const { id_user } = user;
+  const { email } = user;
+  // eslint-disable-next-line camelcase
+  const resetToken = `${id_user}.${crypto.randomBytes(40).toString('hex')}`;
+  const expires = moment().add(2, 'hours').toDate();
+  return PasswordResetToken.create({
+    resetToken,
+    id_user,
+    email,
+    expires,
+  });
 };
 
-/**
- * @typedef RefreshToken
- */
-const PasswordResetToken = mongoose.model('PasswordResetToken', passwordResetTokenSchema);
 module.exports = PasswordResetToken;

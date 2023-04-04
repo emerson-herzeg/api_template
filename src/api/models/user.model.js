@@ -138,8 +138,8 @@ userSchema.findAndGenerateToken = async function (options) {
 
 // eslint-disable-next-line func-names,no-unused-expressions
 userSchema.list = async function ({
-  page = 1, perPage = 30, name, email, role,
-}) {
+                                    page = 1, perPage = 30, name, email, role,
+                                  }) {
   const options = omitBy({ name, email, role }, isNil);
 
   const { count, rows } = await this.findAndCountAll({
@@ -175,8 +175,8 @@ userSchema.checkDuplicateEmail = function (error) {
 
 // eslint-disable-next-line no-unused-expressions,func-names
 userSchema.oAuthLogin = async function ({
-  service, id, email, name, picture,
-}) {
+                                          service, id, email, name, picture,
+                                        }) {
   const user = await this.findOne({ $or: [{ [`services.${service}`]: id }, { email }] });
   if (user) {
     user.services[service] = id;
