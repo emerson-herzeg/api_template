@@ -54,14 +54,6 @@ userSchema.beforeSave((user) => {
   }
 });
 
-userSchema.beforeUpdate(async (user) => {
-  if (user.changed('password')) {
-    const salt = bcrypt.genSaltSync(10);
-    // eslint-disable-next-line no-param-reassign
-    user.password = bcrypt.hashSync(user.password, salt);
-  }
-});
-
 // eslint-disable-next-line func-names
 userSchema.prototype.transform = function () {
   const transformed = {};
