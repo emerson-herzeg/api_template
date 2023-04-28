@@ -27,7 +27,6 @@ const userSchema = sequelize.define('user', {
   },
   name: {
     type: Sequelize.CHAR(100),
-    allowNull: false,
   },
   role: {
     type: Sequelize.CHAR(100),
